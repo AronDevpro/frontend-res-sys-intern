@@ -1,7 +1,7 @@
 import {
     Box,
-    Button,
-    FormControl,
+    Button, Collapse,
+    FormControl, IconButton,
     InputLabel,
     MenuItem,
     Paper,
@@ -17,12 +17,13 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import TableCell from "@mui/material/TableCell";
 import TableBody from "@mui/material/TableBody";
-import EditIcon from "@mui/icons-material/Edit.js";
 import CancelIcon from '@mui/icons-material/Cancel';
 import Modal from "@mui/material/Modal";
 import {useEffect, useState} from "react";
 import {customer, menu, order} from "../../utils/Server.js";
 import AddIcon from '@mui/icons-material/Add';
+import {KeyboardArrowDown, KeyboardArrowUp} from "@mui/icons-material";
+import React from 'react';
 
 function OrderPage() {
     const [orderList, setOrderList]= useState([]);
@@ -34,28 +35,23 @@ function OrderPage() {
     });
     const [itemList, setItemList]= useState([]);
 
-    const [selectedOrder, setSelectedOrder] = useState('');
     const [addOrder, setAddOrder] = useState({
         customerId:'',
         orderItems:[]
     })
-    console.log(addOrder)
-    console.log("item list ",itemList)
 
-    const [openUpdate, setOpenUpdate] = useState(false);
-    const handleOpenUpdate = () => setOpenUpdate(true);
+    console.log(orderList)
 
     const [openAdd, setOpenAdd] = useState(false);
     const handleOpenAdd = () => setOpenAdd(true);
-    const handleCloseUpdate = () => {
-        setOpenUpdate(false)
-        setSelectedOrder('')
-    };
 
     const handleCloseAdd = () => {
-        setOpenAdd(false)
-        setAddOrder('')
-        setItemList([])
+        setOpenAdd(false);
+        setAddOrder({
+            customerId: '',
+            orderItems: []
+        });
+        setItemList([]);
     };
 
     useEffect(() => {
@@ -88,23 +84,6 @@ function OrderPage() {
             });
     }
 
-    function handleDelete(id){
-        fetch(`${order}/${id}`, {
-            method: 'DELETE'
-        }).then((response) => {
-            if (response.status === 200) {
-                fetchOrders();
-            }
-        })
-    }
-
-    const handleUpdate = (e) =>{
-        const {name, value} = e.target;
-        setSelectedOrder((preData) => ({
-            ...preData,
-            [name]: value,
-        }))
-    }
 
     const handleAdd = (e) =>{
         const {name, value} = e.target;
@@ -124,43 +103,32 @@ function OrderPage() {
         }));
     };
 
-    const addItemToList=()=>{
-        setItemList([...itemList, item]);
-        setAddOrder(prevOrder => ({
-            ...prevOrder,
-            orderItems: itemList
-        }));
-        setItem({
-            menuId:'',
-            quantity:''
-        });
-    }
+    const addItemToList = () => {
+        setItemList(prevItemList => [...prevItemList, item]);
 
-    function updateOrder() {
-        fetch(`${order}/${selectedOrder.orderId}`, {
-            method:"PUT",
-            headers:{
-                'Content-type': 'application/json; charset=UTF-8',
-            },
-            body: JSON.stringify(selectedOrder)
-        }).then((r) => {
-            if (r.status === 200) {
-                handleCloseUpdate()
-                fetchOrders();
-            }
-        }).catch((err) => {
-            console.log(err.message);
+        // setAddOrder(prevOrder => ({
+        //     ...prevOrder,
+        //     orderItems: [...prevOrder.orderItems, item]
+        // }));
+
+        setItem({
+            menuId: '',
+            quantity: ''
         });
     }
 
     function AddNewOrder() {
+        let data;
+        if (itemList.length>0){
+        data = {...addOrder, orderItems: itemList}
+        }
         console.log(data)
         fetch(order, {
             method:"POST",
             headers:{
                 'Content-type': 'application/json; charset=UTF-8',
             },
-            body: JSON.stringify(addOrder)
+            body: JSON.stringify(data)
         }).then((r) => {
             if (r.status === 201) {
                 handleCloseAdd()
@@ -170,7 +138,6 @@ function OrderPage() {
             console.log(err.message);
         });
     }
-
 
     function cancelOrder(id) {
         fetch(`${order}/cancel/${id}`, {
@@ -187,6 +154,34 @@ function OrderPage() {
         });
     }
 
+    function calculateTotal() {
+        let total = 0;
+
+        for (let item of itemList) {
+            const menuItem = menuList.find(menuItem => menuItem.menuId === item.menuId);
+
+            if (menuItem) {
+                const price = menuItem.price * item.quantity;
+                console.log(`Price for item with menuId ${item.menuId}: ${price}`);
+
+                total = total+price;
+            } else {
+                console.log(`Menu item with menuId ${item.menuId} not found.`);
+            }
+        }
+        return total;
+    }
+    const [open, setOpen] = useState({});
+
+    const handleToggle = (orderId) => {
+        setOpen((prevOpen) => ({ ...prevOpen, [orderId]: !prevOpen[orderId] }));
+    };
+
+    function getMenuName(id){
+        const menuItem = menuList.find(menuItem => menuItem.menuId === id);
+
+        return menuItem.itemName;
+    }
 
     return (
         <Box sx={{marginY:2}}>
@@ -203,6 +198,7 @@ function OrderPage() {
                 <Table  sx={{  padding:{xs:1, sm:3, md:5} }} aria-label="simple table">
                     <TableHead>
                         <TableRow>
+                            <TableCell style={{fontWeight:"bold", width:20}}></TableCell>
                             <TableCell style={{fontWeight:"bold", width:20}}>#id</TableCell>
                             <TableCell align="left" style={{fontWeight:"bold"}}>Customer Id</TableCell>
                             <TableCell align="left" style={{fontWeight:"bold"}}>Date</TableCell>
@@ -213,77 +209,66 @@ function OrderPage() {
                     </TableHead>
                     <TableBody>
                         {orderList?.map((data) => (
-                            <TableRow
-                                key={data.orderId}
-                                sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                            >
-                                <TableCell component="th" scope="row">
-                                    {data.orderId}
-                                </TableCell>
-                                <TableCell align="left">{data.customerId}</TableCell>
-                                <TableCell align="left">{data.orderDate}</TableCell>
-                                <TableCell align="center">{data.totalAmount}</TableCell>
-                                <TableCell align="center">{data.status}</TableCell>
-                                <TableCell align="right">
-                                    <Stack direction='row' sx={{gap: {xs:1, sm:2, md:3}}} justifyContent='right'>
-                                        <EditIcon onClick={()=>handleOpenUpdate(setSelectedOrder(data))}/>
-                                        <CancelIcon onClick={()=>cancelOrder(data.orderId)}/>
-                                    </Stack>
-                                </TableCell>
-                            </TableRow>
+                            <React.Fragment key={data.orderId}>
+                                <TableRow sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                                    <TableCell>
+                                        <IconButton
+                                            aria-label="expand row"
+                                            size="small"
+                                            onClick={() => handleToggle(data.orderId)}
+                                        >
+                                            {open[data.orderId] ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+                                        </IconButton>
+                                    </TableCell>
+                                    <TableCell component="th" scope="row">
+                                        {data.orderId}
+                                    </TableCell>
+                                    <TableCell align="left">{data.customerId}</TableCell>
+                                    <TableCell align="left">{data.orderDate}</TableCell>
+                                    <TableCell align="center">{data.totalAmount}</TableCell>
+                                    <TableCell align="center">{data.status}</TableCell>
+                                    <TableCell align="right">
+                                        <Stack direction='row' sx={{ gap: { xs: 1, sm: 2, md: 3 } }} justifyContent='right'>
+                                            <CancelIcon onClick={() => cancelOrder(data.orderId)} />
+                                        </Stack>
+                                    </TableCell>
+                                </TableRow>
+                                <TableRow>
+                                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
+                                        <Collapse in={open[data.orderId]} timeout="auto" unmountOnExit>
+                                            <Box marginY={1} width="inherit">
+                                                <TableContainer component={Paper}>
+                                                    <Table aria-label="simple table">
+                                                        <TableHead>
+                                                            <TableRow>
+                                                                <TableCell align="center" sx={{fontWeight:"bold"}}>Items</TableCell>
+                                                                <TableCell align="center" sx={{fontWeight:"bold"}}>Quantity</TableCell>
+                                                            </TableRow>
+                                                        </TableHead>
+                                                        <TableBody>
+                                                            {data?.orderItems?.map((row,index) => (
+                                                                <TableRow
+                                                                    key={index}
+                                                                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                                                                >
+                                                                    <TableCell align="center">
+                                                                        {getMenuName(row.menuId)}
+                                                                    </TableCell>
+                                                                    <TableCell align="center">{row.quantity}</TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                </TableContainer>
+                                            </Box>
+                                        </Collapse>
+                                    </TableCell>
+                                </TableRow>
+                            </React.Fragment>
                         ))}
                     </TableBody>
                 </Table>
             </TableContainer>
-            {/*model for update*/}
-            <Modal
-                open={openUpdate}
-                onClose={handleCloseUpdate}
-                aria-labelledby="modal-modal-title"
-                aria-describedby="modal-modal-description"
-            >
-                <Box sx={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    width: 600,
-                    bgcolor: 'background.paper',
-                    boxShadow: 24,
-                    p: 4,
-                }}>
-                    <Typography id="modal-modal-title" variant="h4" component="h2" align="center" marginY={2}>
-                        Order Update
-                    </Typography>
-                    <Stack gap={3} marginBottom={2}>
-                        <TextField id="outlined-basic"
-                                   label="Name"
-                                   variant="outlined"
-                                   defaultValue={selectedOrder.name}
-                                   name="name"
-                                   onChange={handleUpdate}
-                        />
-                        <TextField id="outlined-basic"
-                                   label="Email"
-                                   variant="outlined"
-                                   defaultValue={selectedOrder.email}
-                                   name="email"
-                                   onChange={handleUpdate}
-                        />
-                        <TextField id="outlined-basic"
-                                   label="Phone Number"
-                                   variant="outlined"
-                                   defaultValue={selectedOrder.phone}
-                                   name="phone"
-                                   onChange={handleUpdate}
-                        />
-                    </Stack>
-                    <Stack direction="row" justifyContent="right" gap={2}>
-                        <Button variant="contained" onClick={updateOrder}>Update</Button>
-                        <Button variant="contained" onClick={handleCloseUpdate}>Close</Button>
-                    </Stack>
-                </Box>
-            </Modal>
             {/*model for add*/}
             <Modal
                 open={openAdd}
@@ -370,6 +355,10 @@ function OrderPage() {
                         </Table>
                     </TableContainer>
                     }
+
+                    <Typography id="modal-modal-title" variant="h4" component="h2" align="center" marginY={2}>
+                        Total : {calculateTotal()}
+                    </Typography>
                     <Stack direction="row" justifyContent="right" gap={2}>
                         <Button variant="contained" onClick={AddNewOrder}>Add</Button>
                         <Button variant="contained" onClick={handleCloseAdd}>Close</Button>
