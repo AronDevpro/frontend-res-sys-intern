@@ -44,7 +44,7 @@ function Header() {
                 <Grid item xs={12} sm={6} md={4} alignContent="center">
                     <Stack gap={3} direction="row" alignItems="center" justifyContent="center">
                     <Link href="/" sx={{textDecoration:"none"}} color={colors.secondary}>Home</Link>
-                    <Link href="/customer" sx={{textDecoration:"none"}} color={colors.secondary}>Customers</Link>
+                    <Link href="/" sx={{textDecoration:"none"}} color={colors.secondary}>Customers</Link>
                     <Link href="/employee" sx={{textDecoration:"none"}} color={colors.secondary}>Employee</Link>
                     <Link href="/reservation" sx={{textDecoration:"none"}} color={colors.secondary}>Reservation</Link>
                     <Link href="/order" sx={{textDecoration:"none"}} color={colors.secondary}>Order</Link>

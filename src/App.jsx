@@ -17,11 +17,11 @@ function App() {
             element: <PageLayout />,
             children: [
                 {
-                    path: '/',
+                    path: '/Home',
                     element: <HomePage />,
                 },
                 {
-                    path: '/customer',
+                    path: '/',
                     element: <CustomerPage />,
                 },
                 {
